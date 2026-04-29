@@ -103,8 +103,8 @@ const CONFIG = {
   staffTop: 60,
   lineGap: 10,
 
-  noteStartX: 110,
-  beatWidth: 90,
+  noteStartX: 0,
+  beatWidth: 0,
 
   answerY: 35,
 
@@ -148,6 +148,13 @@ function resizeCanvas(){
 
   canvas.width = rect.width;
   canvas.height = CONFIG.canvasHeight;
+
+  // 画面幅に合わせて自動調整
+
+  CONFIG.noteStartX = canvas.width * 0.22;
+
+  CONFIG.beatWidth =
+    (canvas.width - CONFIG.noteStartX - 40) / 4;
 }
 
 
@@ -366,22 +373,27 @@ function generatePitchSequence(length,max){
 
   for(let i=1;i<length;i++){
 
+    // 最後の音
     if(i === length - 1){
 
       const endRand = Math.random();
 
+      // ドで終わりやすい
       if(endRand < 0.5){
 
         current = 0;
 
+      // ソ
       }else if(endRand < 0.7){
 
         current = 4;
 
+      // ミ
       }else if(endRand < 0.85){
 
         current = 2;
 
+      // その他
       }else{
 
         current = Math.floor(Math.random() * max);
@@ -392,6 +404,7 @@ function generatePitchSequence(length,max){
       break;
     }
 
+    // シ→ドしやすい
     if(current === 6 && Math.random() < 0.7){
 
       current = 7;
@@ -411,12 +424,15 @@ function generatePitchSequence(length,max){
 
       const r = Math.random();
 
+      // 近くに進む
       if(r < 0.7){
 
         current += Math.random() < 0.5 ? -1 : 1;
 
+      // 同じ音
       }else if(r < 0.9){
 
+      // 少し跳躍
       }else{
 
         const jump = Math.random() < 0.5 ? -2 : 2;
@@ -647,6 +663,8 @@ function startNewQuestion(){
 startNewQuestion();
 
 window.addEventListener("resize", () => {
+
+  resizeCanvas();
 
   if(!hiddenMode){
 
