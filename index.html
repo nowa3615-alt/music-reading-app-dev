@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+  ctx.font = "bold 14px sans-serif";
+  ctx.fillStyle = "blue";
+  ctx.textAlign = "center";
+
+  for(const note of currentNotes){
+
+    ctx.fillText(
+      NOTE_DATA[note.pos].name,
+      note.x,
+      CONFIG.answerY
+    );
+  }
+}
+
+
+// ========================================
+// メイン処理
+// ========================================
+
+function generatePhrase(){
+
+  resizeCanvas();
+  drawStaff();
+
+  const level = document.getElementById("level").value;
+
+  currentNotes = createNotes(level);
+
+  drawAllNotes(currentNotes);
+
+  drawBarLine(CONFIG.noteStartX + CONFIG.beatWidth * 4 - 10);
+}
+
+
+// ========================================
+// 初期化
+// ========================================
+
+generatePhrase();
+
+window.addEventListener("resize", generatePhrase);
+
+
+// ========================================
+// PWA（オフライン対応）
+// ========================================
+
+if ('serviceWorker' in navigator) {
+
+  navigator.serviceWorker
+    .register('sw.js')
+    .then(() => console.log('Service Worker 登録成功'))
+    .catch(err => console.log('SW失敗:', err));
+}
+
+</script>
+
+</body>
+</html>
