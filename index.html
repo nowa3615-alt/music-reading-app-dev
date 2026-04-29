@@ -42,6 +42,13 @@ canvas{
   margin-bottom:20px;
 }
 
+#timer{
+  font-size:32px;
+  font-weight:bold;
+  margin:10px;
+  color:#cc0000;
+}
+
 </style>
 </head>
 
@@ -57,12 +64,19 @@ canvas{
   <option value="8_rhythm">ド〜高いド＋8分音符</option>
 </select>
 
+<select id="timeMode">
+  <option value="5">5秒モード</option>
+  <option value="3">3秒モード</option>
+</select>
+
 <br><br>
 
 <button onclick="showAnswer()">答えを見る</button>
-<button onclick="generatePhrase()">次のフレーズ</button>
+<button onclick="startNewQuestion()">次のフレーズ</button>
 
 </div>
+
+<div id="timer"></div>
 
 <canvas id="score"></canvas>
 
@@ -74,6 +88,8 @@ canvas{
 
 const canvas = document.getElementById("score");
 const ctx = canvas.getContext("2d");
+
+const timerElement = document.getElementById("timer");
 
 
 // ========================================
@@ -105,48 +121,21 @@ const CONFIG = {
 
 const NOTE_DATA = [
 
-  {
-    name:"ド",
-    y:110
-  },
-
-  {
-    name:"レ",
-    y:105
-  },
-
-  {
-    name:"ミ",
-    y:100
-  },
-
-  {
-    name:"ファ",
-    y:95
-  },
-
-  {
-    name:"ソ",
-    y:90
-  },
-
-  {
-    name:"ラ",
-    y:85
-  },
-
-  {
-    name:"シ",
-    y:80
-  },
-
-  {
-    name:"ド",
-    y:75
-  }
+  { name:"ド", y:110 },
+  { name:"レ", y:105 },
+  { name:"ミ", y:100 },
+  { name:"ファ", y:95 },
+  { name:"ソ", y:90 },
+  { name:"ラ", y:85 },
+  { name:"シ", y:80 },
+  { name:"ド", y:75 }
 ];
 
 let currentNotes = [];
+
+let timerInterval = null;
+
+let hiddenMode = false;
 
 
 // ========================================
@@ -243,14 +232,7 @@ function drawNoteHead(x,y){
 }
 
 
-// ========================================
-// 棒方向
-// ========================================
-
 function isStemUp(pos){
-
-  // ソ以下は上向き
-  // ラ以上は下向き
 
   return pos <= 4;
 }
@@ -275,28 +257,7 @@ function drawStem(x,y,pos){
 }
 
 
-function drawFlag(x,y,pos){
-
-  ctx.beginPath();
-
-  if(isStemUp(pos)){
-
-    ctx.moveTo(x + 6, y - CONFIG.stemLength);
-    ctx.lineTo(x + 12, y - 20);
-
-  }else{
-
-    ctx.moveTo(x - 6, y + CONFIG.stemLength);
-    ctx.lineTo(x - 12, y + 20);
-  }
-
-  ctx.stroke();
-}
-
-
 function drawLedgerLine(x,pos){
-
-  // 下のドのみ加線
 
   if(pos !== 0) return;
 
@@ -322,10 +283,6 @@ function drawQuarterNote(note){
   drawStem(note.x,y,note.pos);
 }
 
-
-// ========================================
-// 8分音符
-// ========================================
 
 function drawEighthPair(note1,note2){
 
@@ -409,27 +366,22 @@ function generatePitchSequence(length,max){
 
   for(let i=1;i<length;i++){
 
-    // 最後の音
     if(i === length - 1){
 
       const endRand = Math.random();
 
-      // ドで終わりやすい
       if(endRand < 0.5){
 
         current = 0;
 
-      // ソ
       }else if(endRand < 0.7){
 
         current = 4;
 
-      // ミ
       }else if(endRand < 0.85){
 
         current = 2;
 
-      // その他
       }else{
 
         current = Math.floor(Math.random() * max);
@@ -440,7 +392,6 @@ function generatePitchSequence(length,max){
       break;
     }
 
-    // シ→ドしやすい
     if(current === 6 && Math.random() < 0.7){
 
       current = 7;
@@ -460,15 +411,12 @@ function generatePitchSequence(length,max){
 
       const r = Math.random();
 
-      // 近くに進む
       if(r < 0.7){
 
         current += Math.random() < 0.5 ? -1 : 1;
 
-      // 同じ音
       }else if(r < 0.9){
 
-      // 少し跳躍
       }else{
 
         const jump = Math.random() < 0.5 ? -2 : 2;
@@ -589,10 +537,40 @@ function createNotes(level){
 
 
 // ========================================
+// 問題表示
+// ========================================
+
+function drawQuestion(){
+
+  drawStaff();
+
+  drawAllNotes(currentNotes);
+
+  drawBarLine(CONFIG.noteStartX + CONFIG.beatWidth * 4 - 15);
+}
+
+
+// ========================================
+// 問題を隠す
+// ========================================
+
+function hideQuestion(){
+
+  hiddenMode = true;
+
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  timerElement.textContent = "時間切れ！";
+}
+
+
+// ========================================
 // 答え表示
 // ========================================
 
 function showAnswer(){
+
+  drawQuestion();
 
   ctx.font = "bold 14px sans-serif";
 
@@ -612,22 +590,53 @@ function showAnswer(){
 
 
 // ========================================
-// メイン
+// タイマー
 // ========================================
 
-function generatePhrase(){
+function startTimer(){
+
+  clearInterval(timerInterval);
+
+  let timeLeft = parseInt(
+    document.getElementById("timeMode").value
+  );
+
+  timerElement.textContent = timeLeft;
+
+  timerInterval = setInterval(() => {
+
+    timeLeft--;
+
+    timerElement.textContent = timeLeft;
+
+    if(timeLeft <= 0){
+
+      clearInterval(timerInterval);
+
+      hideQuestion();
+    }
+
+  },1000);
+}
+
+
+// ========================================
+// 新問題
+// ========================================
+
+function startNewQuestion(){
+
+  hiddenMode = false;
 
   resizeCanvas();
-
-  drawStaff();
 
   const level = document.getElementById("level").value;
 
   currentNotes = createNotes(level);
 
-  drawAllNotes(currentNotes);
+  drawQuestion();
 
-  drawBarLine(CONFIG.noteStartX + CONFIG.beatWidth * 4 - 15);
+  startTimer();
 }
 
 
@@ -635,9 +644,15 @@ function generatePhrase(){
 // 初期化
 // ========================================
 
-generatePhrase();
+startNewQuestion();
 
-window.addEventListener("resize", generatePhrase);
+window.addEventListener("resize", () => {
+
+  if(!hiddenMode){
+
+    drawQuestion();
+  }
+});
 
 
 // ========================================
