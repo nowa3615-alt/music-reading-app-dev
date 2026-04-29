@@ -15,21 +15,31 @@
 body{
   font-family:sans-serif;
   text-align:center;
-  margin-top:20px;
+  margin:20px;
+  background:#ffffff;
+}
+
+h2{
+  margin-bottom:20px;
 }
 
 button,
 select{
   font-size:18px;
-  padding:8px 12px;
+  padding:10px 14px;
   margin:5px;
 }
 
 canvas{
   border:1px solid #ccc;
-  width:90vw;
-  max-width:700px;
+  width:95vw;
+  max-width:720px;
   height:auto;
+  background:white;
+}
+
+.controls{
+  margin-bottom:20px;
 }
 
 </style>
@@ -39,6 +49,8 @@ canvas{
 
 <h2>ピアノ譜読みトレーニング</h2>
 
+<div class="controls">
+
 <select id="level">
   <option value="5">ド〜ソ</option>
   <option value="8">ド〜高いド</option>
@@ -47,58 +59,98 @@ canvas{
 
 <br><br>
 
-<canvas id="score"></canvas>
-
-<br><br>
-
 <button onclick="showAnswer()">答えを見る</button>
 <button onclick="generatePhrase()">次のフレーズ</button>
+
+</div>
+
+<canvas id="score"></canvas>
 
 <script>
 
 // ========================================
-// 基本設定
+// Canvas
 // ========================================
 
 const canvas = document.getElementById("score");
 const ctx = canvas.getContext("2d");
 
+
+// ========================================
+// 設定
+// ========================================
+
 const CONFIG = {
 
-  canvasHeight: 170,
+  canvasHeight: 180,
 
   staffTop: 60,
   lineGap: 10,
-  staffLines: 5,
 
-  noteStartX: 90,
-  beatWidth: 75,
+  noteStartX: 110,
+  beatWidth: 90,
 
-  answerY: 40,
+  answerY: 35,
 
-  noteHeadWidth: 6,
-  noteHeadHeight: 5,
+  stemLength: 30,
 
-  stemLength: 30
+  noteHeadWidth: 7,
+  noteHeadHeight: 5
 };
+
+
+// ========================================
+// 音情報
+// ========================================
 
 const NOTE_DATA = [
 
-  { name:"ド", y:110 },
-  { name:"レ", y:105 },
-  { name:"ミ", y:100 },
-  { name:"ファ", y:95 },
-  { name:"ソ", y:90 },
-  { name:"ラ", y:85 },
-  { name:"シ", y:80 },
-  { name:"ド", y:75 }
+  {
+    name:"ド",
+    y:110
+  },
+
+  {
+    name:"レ",
+    y:105
+  },
+
+  {
+    name:"ミ",
+    y:100
+  },
+
+  {
+    name:"ファ",
+    y:95
+  },
+
+  {
+    name:"ソ",
+    y:90
+  },
+
+  {
+    name:"ラ",
+    y:85
+  },
+
+  {
+    name:"シ",
+    y:80
+  },
+
+  {
+    name:"ド",
+    y:75
+  }
 ];
 
 let currentNotes = [];
 
 
 // ========================================
-// Canvasサイズ
+// リサイズ
 // ========================================
 
 function resizeCanvas(){
@@ -125,79 +177,52 @@ function drawStaff(){
 
 function drawStaffLines(){
 
-  for(let i=0;i<CONFIG.staffLines;i++){
+  for(let i=0;i<5;i++){
 
     const y = CONFIG.staffTop + i * CONFIG.lineGap;
 
     ctx.beginPath();
     ctx.moveTo(40,y);
-    ctx.lineTo(canvas.width-20,y);
+    ctx.lineTo(canvas.width - 20,y);
     ctx.stroke();
   }
 }
 
 function drawTrebleClef(){
 
-  ctx.font = "50px serif";
-  ctx.fillText("𝄞", 10, 105);
+  ctx.font = "52px serif";
+  ctx.fillText("𝄞", 15, 102);
 }
 
 function drawTimeSignature(){
 
   ctx.font = "bold 22px sans-serif";
 
-  ctx.fillText("4", 55, 75);
-  ctx.fillText("4", 55, 95);
+  ctx.fillText("4", 62, 75);
+  ctx.fillText("4", 62, 95);
 }
 
 function drawBarLine(x){
 
   ctx.beginPath();
+
   ctx.moveTo(x,60);
   ctx.lineTo(x,100);
+
   ctx.stroke();
 }
 
 
 // ========================================
-// 音符描画
+// 音符
 // ========================================
 
-function drawNote(note){
-
-  drawLedgerLine(note);
-  drawNoteHead(note);
-
-  if(note.type === "eighth" && note.beamed){
-    return;
-  }
-
-  drawStem(note);
-
-  if(note.type === "eighth"){
-    drawFlag(note);
-  }
-}
-
-function drawLedgerLine(note){
-
-  if(note.pos !== 0) return;
-
-  const y = NOTE_DATA[note.pos].y;
-
-  ctx.beginPath();
-  ctx.moveTo(note.x-10, y);
-  ctx.lineTo(note.x+10, y);
-  ctx.stroke();
-}
-
-function drawNoteHead(note){
-
-  const y = NOTE_DATA[note.pos].y;
+function drawNoteHead(x,y){
 
   ctx.save();
 
-  ctx.translate(note.x, y);
+  ctx.translate(x,y);
+
   ctx.rotate(-0.3);
 
   ctx.beginPath();
@@ -217,94 +242,131 @@ function drawNoteHead(note){
   ctx.restore();
 }
 
-function isStemUp(note){
 
-  const y = NOTE_DATA[note.pos].y;
+// ========================================
+// 棒方向
+// ========================================
 
-  return y > 90;
+function isStemUp(pos){
+
+  // ソ以下は上向き
+  // ラ以上は下向き
+
+  return pos <= 4;
 }
 
-function drawStem(note){
 
-  const y = NOTE_DATA[note.pos].y;
+function drawStem(x,y,pos){
 
   ctx.beginPath();
 
-  if(isStemUp(note)){
+  if(isStemUp(pos)){
 
-    ctx.moveTo(note.x + 6, y);
-    ctx.lineTo(note.x + 6, y - CONFIG.stemLength);
-
-  }else{
-
-    ctx.moveTo(note.x - 6, y);
-    ctx.lineTo(note.x - 6, y + CONFIG.stemLength);
-  }
-
-  ctx.stroke();
-}
-
-function drawFlag(note){
-
-  const y = NOTE_DATA[note.pos].y;
-
-  ctx.beginPath();
-
-  if(isStemUp(note)){
-
-    ctx.moveTo(note.x + 6, y - CONFIG.stemLength);
-    ctx.lineTo(note.x + 12, y - 20);
+    ctx.moveTo(x + 6, y);
+    ctx.lineTo(x + 6, y - CONFIG.stemLength);
 
   }else{
 
-    ctx.moveTo(note.x - 6, y + CONFIG.stemLength);
-    ctx.lineTo(note.x - 12, y + 20);
+    ctx.moveTo(x - 6, y);
+    ctx.lineTo(x - 6, y + CONFIG.stemLength);
   }
 
   ctx.stroke();
 }
 
 
+function drawFlag(x,y,pos){
+
+  ctx.beginPath();
+
+  if(isStemUp(pos)){
+
+    ctx.moveTo(x + 6, y - CONFIG.stemLength);
+    ctx.lineTo(x + 12, y - 20);
+
+  }else{
+
+    ctx.moveTo(x - 6, y + CONFIG.stemLength);
+    ctx.lineTo(x - 12, y + 20);
+  }
+
+  ctx.stroke();
+}
+
+
+function drawLedgerLine(x,pos){
+
+  // 下のドのみ加線
+
+  if(pos !== 0) return;
+
+  const y = NOTE_DATA[pos].y;
+
+  ctx.beginPath();
+
+  ctx.moveTo(x - 10,y);
+  ctx.lineTo(x + 10,y);
+
+  ctx.stroke();
+}
+
+
+function drawQuarterNote(note){
+
+  const y = NOTE_DATA[note.pos].y;
+
+  drawLedgerLine(note.x, note.pos);
+
+  drawNoteHead(note.x,y);
+
+  drawStem(note.x,y,note.pos);
+}
+
+
 // ========================================
-// 8分音符ビーム
+// 8分音符
 // ========================================
 
-function drawBeamPair(note1, note2){
-
-  note1.beamed = true;
-  note2.beamed = true;
-
-  drawNoteHead(note1);
-  drawNoteHead(note2);
-
-  drawLedgerLine(note1);
-  drawLedgerLine(note2);
+function drawEighthPair(note1,note2){
 
   const y1 = NOTE_DATA[note1.pos].y;
   const y2 = NOTE_DATA[note2.pos].y;
 
-  const stem1 = y1 - CONFIG.stemLength;
-  const stem2 = y2 - CONFIG.stemLength;
+  drawLedgerLine(note1.x,note1.pos);
+  drawLedgerLine(note2.x,note2.pos);
+
+  drawNoteHead(note1.x,y1);
+  drawNoteHead(note2.x,y2);
+
+  const stemTop1 = y1 - CONFIG.stemLength;
+  const stemTop2 = y2 - CONFIG.stemLength;
 
   ctx.beginPath();
 
   ctx.moveTo(note1.x + 6, y1);
-  ctx.lineTo(note1.x + 6, stem1);
+  ctx.lineTo(note1.x + 6, stemTop1);
 
   ctx.moveTo(note2.x + 6, y2);
-  ctx.lineTo(note2.x + 6, stem2);
+  ctx.lineTo(note2.x + 6, stemTop2);
 
   ctx.stroke();
 
   ctx.beginPath();
 
-  ctx.moveTo(note1.x + 6, stem1);
-  ctx.lineTo(note2.x + 6, stem2);
-
   ctx.lineWidth = 4;
+
+  ctx.moveTo(note1.x + 6, stemTop1);
+  ctx.lineTo(note2.x + 6, stemTop2);
+
   ctx.stroke();
+
   ctx.lineWidth = 1;
 }
+
+
+// ========================================
+// 描画
+// ========================================
 
 function drawAllNotes(notes){
 
@@ -319,12 +381,13 @@ function drawAllNotes(notes){
       next.type === "eighth"
     ){
 
-      drawBeamPair(note,next);
+      drawEighthPair(note,next);
+
       i++;
 
     }else{
 
-      drawNote(note);
+      drawQuarterNote(note);
     }
   }
 }
@@ -334,9 +397,9 @@ function drawAllNotes(notes){
 // 音楽っぽい音生成
 // ========================================
 
-function generatePitchSequence(length, max){
+function generatePitchSequence(length,max){
 
-  let sequence = [];
+  const sequence = [];
 
   let current = Math.floor(Math.random() * max);
 
@@ -346,46 +409,83 @@ function generatePitchSequence(length, max){
 
   for(let i=1;i<length;i++){
 
+    // 最後の音
     if(i === length - 1){
 
-      current = 0;
+      const endRand = Math.random();
+
+      // ドで終わりやすい
+      if(endRand < 0.5){
+
+        current = 0;
+
+      // ソ
+      }else if(endRand < 0.7){
+
+        current = 4;
+
+      // ミ
+      }else if(endRand < 0.85){
+
+        current = 2;
+
+      // その他
+      }else{
+
+        current = Math.floor(Math.random() * max);
+      }
+
       sequence.push(current);
+
       break;
     }
 
+    // シ→ドしやすい
     if(current === 6 && Math.random() < 0.7){
 
       current = 7;
+
       sequence.push(current);
+
       continue;
     }
 
     if(previousJump !== 0){
 
       current -= previousJump;
+
       previousJump = 0;
 
     }else{
 
       const r = Math.random();
 
+      // 近くに進む
       if(r < 0.7){
 
         current += Math.random() < 0.5 ? -1 : 1;
 
+      // 同じ音
       }else if(r < 0.9){
 
+      // 少し跳躍
       }else{
 
         const jump = Math.random() < 0.5 ? -2 : 2;
 
         current += jump;
+
         previousJump = jump;
       }
     }
 
-    if(current < 0) current = 0;
-    if(current >= max) current = max - 1;
+    if(current < 0){
+      current = 0;
+    }
+
+    if(current >= max){
+      current = max - 1;
+    }
 
     sequence.push(current);
   }
@@ -406,7 +506,8 @@ function generateRhythm(){
 
     if(Math.random() < 0.4){
 
-      rhythm.push("eighth", "eighth");
+      rhythm.push("eighth");
+      rhythm.push("eighth");
 
     }else{
 
@@ -419,7 +520,7 @@ function generateRhythm(){
 
 
 // ========================================
-// フレーズ生成
+// ノート生成
 // ========================================
 
 function createNotes(level){
@@ -431,13 +532,15 @@ function createNotes(level){
   if(level === "8_rhythm"){
 
     const rhythm = generateRhythm();
-    const pitches = generatePitchSequence(rhythm.length, 8);
+
+    const pitches = generatePitchSequence(rhythm.length,8);
 
     for(let i=0;i<rhythm.length;i++){
 
-      const type = rhythm[i];
-
-      if(type === "eighth" && rhythm[i+1] === "eighth"){
+      if(
+        rhythm[i] === "eighth" &&
+        rhythm[i+1] === "eighth"
+      ){
 
         notes.push({
           pos:pitches[i],
@@ -469,7 +572,7 @@ function createNotes(level){
 
     const max = parseInt(level);
 
-    const pitches = generatePitchSequence(4, max);
+    const pitches = generatePitchSequence(4,max);
 
     for(let i=0;i<4;i++){
 
@@ -492,7 +595,9 @@ function createNotes(level){
 function showAnswer(){
 
   ctx.font = "bold 14px sans-serif";
+
   ctx.fillStyle = "blue";
+
   ctx.textAlign = "center";
 
   for(const note of currentNotes){
@@ -507,12 +612,13 @@ function showAnswer(){
 
 
 // ========================================
-// メイン処理
+// メイン
 // ========================================
 
 function generatePhrase(){
 
   resizeCanvas();
+
   drawStaff();
 
   const level = document.getElementById("level").value;
@@ -521,7 +627,7 @@ function generatePhrase(){
 
   drawAllNotes(currentNotes);
 
-  drawBarLine(CONFIG.noteStartX + CONFIG.beatWidth * 4 - 10);
+  drawBarLine(CONFIG.noteStartX + CONFIG.beatWidth * 4 - 15);
 }
 
 
@@ -535,15 +641,15 @@ window.addEventListener("resize", generatePhrase);
 
 
 // ========================================
-// PWA（オフライン対応）
+// PWA
 // ========================================
 
-if ('serviceWorker' in navigator) {
+if("serviceWorker" in navigator){
 
   navigator.serviceWorker
-    .register('sw.js')
-    .then(() => console.log('Service Worker 登録成功'))
-    .catch(err => console.log('SW失敗:', err));
+    .register("sw.js")
+    .then(() => console.log("Service Worker 登録成功"))
+    .catch(err => console.log("SW失敗:", err));
 }
 
 </script>
