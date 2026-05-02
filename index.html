@@ -47,6 +47,7 @@ canvas{
   font-weight:bold;
   margin:10px;
   color:#cc0000;
+  min-height:40px;
 }
 
 </style>
@@ -65,6 +66,7 @@ canvas{
 </select>
 
 <select id="timeMode">
+  <option value="normal">ノーマルモード</option>
   <option value="5">5秒モード</option>
   <option value="3">3秒モード</option>
 </select>
@@ -148,8 +150,6 @@ function resizeCanvas(){
 
   canvas.width = rect.width;
   canvas.height = CONFIG.canvasHeight;
-
-  // 画面幅に合わせて自動調整
 
   CONFIG.noteStartX = canvas.width * 0.28;
 
@@ -239,9 +239,16 @@ function drawNoteHead(x,y){
 }
 
 
+// ========================================
+// 棒方向
+// ========================================
+
 function isStemUp(pos){
 
-  return pos <= 4;
+  // ラまでは上向き
+  // シ以上は下向き
+
+  return pos <= 5;
 }
 
 
@@ -373,27 +380,22 @@ function generatePitchSequence(length,max){
 
   for(let i=1;i<length;i++){
 
-    // 最後の音
     if(i === length - 1){
 
       const endRand = Math.random();
 
-      // ドで終わりやすい
       if(endRand < 0.5){
 
         current = 0;
 
-      // ソ
       }else if(endRand < 0.7){
 
         current = 4;
 
-      // ミ
       }else if(endRand < 0.85){
 
         current = 2;
 
-      // その他
       }else{
 
         current = Math.floor(Math.random() * max);
@@ -404,7 +406,6 @@ function generatePitchSequence(length,max){
       break;
     }
 
-    // シ→ドしやすい
     if(current === 6 && Math.random() < 0.7){
 
       current = 7;
@@ -424,15 +425,12 @@ function generatePitchSequence(length,max){
 
       const r = Math.random();
 
-      // 近くに進む
       if(r < 0.7){
 
         current += Math.random() < 0.5 ? -1 : 1;
 
-      // 同じ音
       }else if(r < 0.9){
 
-      // 少し跳躍
       }else{
 
         const jump = Math.random() < 0.5 ? -2 : 2;
@@ -613,9 +611,18 @@ function startTimer(){
 
   clearInterval(timerInterval);
 
-  let timeLeft = parseInt(
-    document.getElementById("timeMode").value
-  );
+  const mode =
+    document.getElementById("timeMode").value;
+
+  // ノーマルモード
+  if(mode === "normal"){
+
+    timerElement.textContent = "";
+
+    return;
+  }
+
+  let timeLeft = parseInt(mode);
 
   timerElement.textContent = timeLeft;
 
@@ -646,7 +653,8 @@ function startNewQuestion(){
 
   resizeCanvas();
 
-  const level = document.getElementById("level").value;
+  const level =
+    document.getElementById("level").value;
 
   currentNotes = createNotes(level);
 
